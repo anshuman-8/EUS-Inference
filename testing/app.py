@@ -1,100 +1,97 @@
-
-# import lightning as L
-
-
-# class YourComponent(L.LightningWork):
-#    def run(self):
-#       print('RUN ANY PYTHON CODE HERE')
-
-
-# component = YourComponent()
-# app = L.LightningApp(component)
-
-
-import os
 import cv2
-import numpy as np
 import torch
+import timm
 import logging as log
 from PIL import Image
-from model_arc import Discriminator
+from model import TestLightningModule
 from torchvision import transforms
 import torch.nn.functional as F
 
-model_path = "testing/model/face-disc-test-1.pth"
+log.basicConfig(
+    level=log.DEBUG,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+    handlers=[log.FileHandler("testing.log", mode="w"), log.StreamHandler()],
+)
 
-# Initialize the video capture object
-cap = cv2.VideoCapture(0)  
+EUS_model = "./checkpoint/a7a72f80-fd9d-4f60-9cc9-1c2227375e39.ckpt"
+
+cap = cv2.VideoCapture(2) # 2 for HDMI port
+cap.set(cv2.CAP_PROP_FPS, 30)
 log.info("Video capture object initialized.")
 
 if not cap.isOpened():
-   log.error("Error: Could not access the video source.")
-   exit()
+    log.error("Could not access the video source.")
+    exit()
 
 
-IMAGE_SIZE = 64
-CHANNELS_IMG = 3
-BATCH_SIZE = 4
-FEATURES = 128
+IMAGE_SIZE = 224
 
 transforms = transforms.Compose(
-    [  
+    [
         transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
+        #   transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
-        transforms.Normalize([0.5 for _ in range(CHANNELS_IMG)], [0.5 for _ in range(CHANNELS_IMG)])
+        transforms.Normalize(
+            [0.22782720625400543, 0.22887665033340454, 0.23145385086536407],
+            [0.11017259210348129, 0.11015155166387558, 0.11037711054086685],
+        ),
     ]
 )
 
+
 def preprocess_frame(frame):
-   frame = Image.fromarray(frame)
-   return transforms(frame)
+    frame = Image.fromarray(frame)
+    return transforms(frame)
 
-model = Discriminator(CHANNELS_IMG, FEATURES)
-model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-model.eval()
-log.info("Model loaded.")
 
-batch = torch.empty((0, 3, IMAGE_SIZE, IMAGE_SIZE))
-image_batch = []
+try:
+    densenet = timm.create_model("densenet161", pretrained=False, num_classes=3)
+    model = TestLightningModule(densenet)
+    model.load_from_checkpoint(EUS_model, map_location="cpu")
+
+    model.eval()
+    log.debug("Model loaded.")
+except Exception as e:
+    log.error(f"Unable to load model.\n{e}")
+    exit()
+
+station_class = {0: "Station 1", 1: "Station 2", 2: "Station 3"}
+
 while True:
-   ret, frame = cap.read()
+    ret, frame = cap.read()
 
-   if not ret:
-      print("Error: Unable to capture frame.")
-      break
-   
-   frame_tensor = preprocess_frame(frame)
-   log.info("Frame preprocessed.")
+    if not ret:
+        log.error(" Unable to capture frame.")
+        break
 
-   batch = torch.cat([batch, frame_tensor.unsqueeze(0)],dim=0 )
-   image_batch.append(frame)
-   log.info("Frame added to batch.")
+    frame_tensor = preprocess_frame(frame)
 
-   # print(f'{frame_tensor.shape=}')
-   # with torch.no_grad():
-   #    output = model(frame_tensor.unsqueeze(0))
+    with torch.no_grad():
+        prediction = model(frame_tensor.unsqueeze(0)).squeeze(0).softmax(0)
+        prediction_class = prediction.argmax().item()
+        log.info(station_class[prediction_class])
 
-   # cv2.putText(frame, f'Face: {output.item()*100:.2f}%', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+        for i in range(3):
+            text = f"{station_class[i]}: {prediction[i].item()*100:.2f}%"
+            position = (10, (i + 1) * 32)
+            color = (255, 255, 255)
+            cv2.putText(
+                frame,
+                text,
+                position,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                color,
+                2,
+                cv2.LINE_AA,
+            )
 
+    cv2.imshow("Live Video Feed", frame)
 
-
-   if batch.shape[0] >= BATCH_SIZE:
-
-      # batch_tensor = torch.tensor(batch)
-
-      with torch.no_grad():
-         output = model(batch)
-
-      for i, output_item in enumerate(output):
-         # frame_with_overlay = image_batch[i].copy()
-         cv2.putText(image_batch[i], f'Face: {output_item.item()*100:.2f}%', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-       # Display the frame
-         cv2.imshow('Live Video Feed', frame)
-
-    # Check for the 'q' key to exit the loop
-   if cv2.waitKey(1) & 0xFF == ord('q'):
-      break
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        log.info("Exiting.")
+        break
 
 cap.release()
 cv2.destroyAllWindows()

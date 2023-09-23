@@ -28,13 +28,13 @@ cap = cv2.VideoCapture(0)
 log.info("Video capture object initialized.")
 
 if not cap.isOpened():
-    log.error("Error: Could not access the video source.")
-    exit()
+   log.error("Error: Could not access the video source.")
+   exit()
 
 
-IMAGE_SIZE = 128
+IMAGE_SIZE = 64
 CHANNELS_IMG = 3
-BATCH_SIZE = 16
+BATCH_SIZE = 4
 FEATURES = 128
 
 transforms = transforms.Compose(
@@ -46,8 +46,8 @@ transforms = transforms.Compose(
 )
 
 def preprocess_frame(frame):
-    frame = Image.fromarray(frame)
-    return transforms(frame)
+   frame = Image.fromarray(frame)
+   return transforms(frame)
 
 model = Discriminator(CHANNELS_IMG, FEATURES)
 model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
@@ -55,52 +55,46 @@ model.eval()
 log.info("Model loaded.")
 
 batch = torch.empty((0, 3, IMAGE_SIZE, IMAGE_SIZE))
-# batch = []
-
+image_batch = []
 while True:
-    ret, frame = cap.read()
+   ret, frame = cap.read()
 
-    if not ret:
-        print("Error: Unable to capture frame.")
-        break
-    
-    frame_tensor = preprocess_frame(frame)
-    log.info("Frame preprocessed.")
+   if not ret:
+      print("Error: Unable to capture frame.")
+      break
    
-    batch = torch.cat([batch, frame_tensor.unsqueeze(0)],dim=0 )
-    log.info("Frame added to batch.")
+   frame_tensor = preprocess_frame(frame)
+   log.info("Frame preprocessed.")
 
-    if batch.shape[0] >= 16:
+   batch = torch.cat([batch, frame_tensor.unsqueeze(0)],dim=0 )
+   image_batch.append(frame)
+   log.info("Frame added to batch.")
 
-      #   batch_tensor = torch.tensor(batch)
+   # print(f'{frame_tensor.shape=}')
+   # with torch.no_grad():
+   #    output = model(frame_tensor.unsqueeze(0))
 
-        with torch.no_grad():
-            output = model(batch)
+   # cv2.putText(frame, f'Face: {output.item()*100:.2f}%', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-        print(output)
-        class_predictions = torch.argmax(output, dim=1)
-        class_probabilities = F.softmax(output, dim=1)
 
-        # Display the frames with classification details
-        for i, prediction in enumerate(class_predictions):
-            classification_percentage = class_probabilities[i][prediction].item() * 100
 
-            # Overlay classification details on the frame
-            cv2.putText(frame, f'Class {prediction}: {classification_percentage:.2f}%', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+   if batch.shape[0] >= BATCH_SIZE:
 
-            # Display the frame
-            cv2.imshow('Live Video Feed', frame)
+      # batch_tensor = torch.tensor(batch)
 
-            # Clear the batch
-            batch = []
+      with torch.no_grad():
+         output = model(batch)
+
+      for i, output_item in enumerate(output):
+         # frame_with_overlay = image_batch[i].copy()
+         cv2.putText(image_batch[i], f'Face: {output_item.item()*100:.2f}%', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
        # Display the frame
-        cv2.imshow('Live Video Feed', frame)
+         cv2.imshow('Live Video Feed', frame)
 
     # Check for the 'q' key to exit the loop
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+   if cv2.waitKey(1) & 0xFF == ord('q'):
+      break
 
-# Release the video capture object and close all windows
 cap.release()
 cv2.destroyAllWindows()
