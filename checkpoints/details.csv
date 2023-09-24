@@ -1,4 +1,4 @@
-sr, checkpoint, model, process, acc
+#, checkpoint, model, process, acc
 1,35f62346-a69b-4f7d-9e5f-b384bd2f7e16.ckpt,resnet50,-,-
 2,96c22c44-cb77-4347-9da3-052ef63437a0.ckpt,densenet161,denoising,88
 3,a7a72f80-fd9d-4f60-9cc9-1c2227375e39.ckpt,densenet161,-,-

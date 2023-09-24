@@ -14,10 +14,10 @@ log.basicConfig(
     handlers=[log.FileHandler("testing.log", mode="w"), log.StreamHandler()],
 )
 
-EUS_model_1 = "./checkpoint/a7a72f80-fd9d-4f60-9cc9-1c2227375e39.ckpt"  # densenet161
-EUS_model_2 = "./checkpoint/35f62346-a69b-4f7d-9e5f-b384bd2f7e16.ckpt"  # resnet50
-EUS_model_3 = "./checkpoint/96c22c44-cb77-4347-9da3-052ef63437a0.ckpt"  # densenet161 denoising
-EUS_model_4 = "./checkpoint/d72fb346-f652-4605-9039-856ca4315bc2.ckpt"  # densenet161 gaussian smoothing
+EUS_model_1 = "../checkpoint/a7a72f80-fd9d-4f60-9cc9-1c2227375e39.ckpt"  # densenet161
+EUS_model_2 = "../checkpoint/35f62346-a69b-4f7d-9e5f-b384bd2f7e16.ckpt"  # resnet50
+EUS_model_3 = "../checkpoint/96c22c44-cb77-4347-9da3-052ef63437a0.ckpt"  # densenet161 denoising
+EUS_model_4 = "testing/checkpoint/d72fb346-f652-4605-9039-856ca4315bc2.ckpt"  # densenet161 gaussian smoothing
 
 cap = cv2.VideoCapture(2)  # 2 for HDMI port
 cap.set(cv2.CAP_PROP_FPS, 30)
