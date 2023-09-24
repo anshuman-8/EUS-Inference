@@ -14,9 +14,12 @@ log.basicConfig(
     handlers=[log.FileHandler("testing.log", mode="w"), log.StreamHandler()],
 )
 
-EUS_model = "./checkpoint/a7a72f80-fd9d-4f60-9cc9-1c2227375e39.ckpt"
+EUS_model_1 = "./checkpoint/a7a72f80-fd9d-4f60-9cc9-1c2227375e39.ckpt"  # densenet161
+EUS_model_2 = "./checkpoint/35f62346-a69b-4f7d-9e5f-b384bd2f7e16.ckpt"  # resnet50
+EUS_model_3 = "./checkpoint/96c22c44-cb77-4347-9da3-052ef63437a0.ckpt"  # densenet161 denoising
+EUS_model_4 = "./checkpoint/d72fb346-f652-4605-9039-856ca4315bc2.ckpt"  # densenet161 gaussian smoothing
 
-cap = cv2.VideoCapture(2) # 2 for HDMI port
+cap = cv2.VideoCapture(2)  # 2 for HDMI port
 cap.set(cv2.CAP_PROP_FPS, 30)
 log.info("Video capture object initialized.")
 
@@ -46,12 +49,13 @@ def preprocess_frame(frame):
 
 
 try:
-    densenet = timm.create_model("densenet161", pretrained=False, num_classes=3)
-    model = TestLightningModule(densenet)
-    model.load_from_checkpoint(EUS_model, map_location="cpu")
-
+    model = TestLightningModule(model=None)
+    model.load_from_checkpoint(
+        EUS_model_4, map_location="cpu"
+    )
+    log.debug("Model loaded from checkpoint.")
     model.eval()
-    log.debug("Model loaded.")
+    log.info("Model loaded.")
 except Exception as e:
     log.error(f"Unable to load model.\n{e}")
     exit()
@@ -87,7 +91,7 @@ while True:
                 cv2.LINE_AA,
             )
 
-    cv2.imshow("Live Video Feed", frame)
+    cv2.imshow("EUS Inference", frame)
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
         log.info("Exiting.")
