@@ -1,13 +1,14 @@
-import sys
+import cv2
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QHBoxLayout, QProgressBar, QWidget, QLabel, QVBoxLayout, QPushButton, QFrame
 
 class InferenceScreen(QWidget):
-    def __init__(self):
+    def __init__(self, video_source=2):
         super().__init__()
         self.station1_value = 0
         self.station2_value = 0
         self.station3_value = 0
+        self.video_source = video_source
         self.render()
 
     def render(self):
@@ -20,6 +21,9 @@ class InferenceScreen(QWidget):
         video_frame.setLineWidth(2)
         video_frame.setMidLineWidth(1)
         video_layout = QVBoxLayout()
+
+        self.cap = cv2.VideoCapture(self.video_source)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
 
         # Video Label
         self.video_label = QLabel()

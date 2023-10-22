@@ -12,9 +12,9 @@ import cv2
 import logging as log
 
 class MainScreen(QWidget):
-    def __init__(self):
+    def __init__(self, video_source=2):
         super().__init__()
-        self.video_source = 2
+        self.video_source = video_source
         self.initUI()
 
     def initUI(self):
@@ -100,7 +100,7 @@ class MainScreen(QWidget):
 
     def updateVideoSource(self, index):
         self.cap.release()
-        self.video_source = index
+        self.parent().setVideoSource(index)
         self.cap = cv2.VideoCapture(self.video_source)
         if not self.cap.isOpened():
             self.no_video_label.setVisible(True)
@@ -114,4 +114,5 @@ class MainScreen(QWidget):
             self.timer.start(30)
 
     def showSecondScreen(self):
+        self.cap.release()
         self.parent().setCurrentIndex(1)
