@@ -16,7 +16,7 @@ log.basicConfig(
     level=log.DEBUG,
     format="%(asctime)s %(levelname)s %(message)s",
     datefmt="%H:%M:%S",
-    handlers=[log.FileHandler("testing.log", mode="w"), log.StreamHandler()],
+    handlers=[log.FileHandler("./testing/testing.log", mode="w"), log.StreamHandler()],
 )
 
 EUS_model_1 = "./testing/checkpoint/a7a72f80-fd9d-4f60-9cc9-1c2227375e39.ckpt"  # densenet161
@@ -24,7 +24,7 @@ EUS_model_2 = "./testing/checkpoint/35f62346-a69b-4f7d-9e5f-b384bd2f7e16.ckpt"  
 EUS_model_3 = "./testing/checkpoint/96c22c44-cb77-4347-9da3-052ef63437a0.ckpt"  # densenet161 denoising
 EUS_model_4 = "./testing/checkpoint/d72fb346-f652-4605-9039-856ca4315bc2.ckpt"  # densenet161 (best)
 
-Vid_source = "./testing/data/achamma_paulose_1967060.mkv"
+Vid_source = "./testing/data/Beena-2632828-EUS.mkv"
 
 '''
 Video details:
@@ -42,7 +42,7 @@ test -
 Station 1 - 00:01:09 - 00:08:21
 Station 2 - 00:08:44 - 00:13:24
 Station 3 - 00:00:00 - 00:00:00
-acc - 64.67%
+acc - 74.79%
 balanced acc - 77.43%
 -------------------------------------
 
@@ -59,6 +59,20 @@ acc - 64.05%
 balanced acc - 64.88%
 -------------------------------------
 
+Beena-2632828.mkv
+src - testing/data/Beena-2632828-EUS.mkv
+crop_params = [185, 435, 135, 120]
+trained - No
+test - no
+Station 1 - 00:00:18 - 00:01:59
+Station 2 - 00:04:51 - 00:07:14
+Station 2 - 00:26:18 - 00:27:32
+Station 3 - 00:12:14 - 00:18:36
+Station 3 - 00:29:57 - 00:32:54
+acc - 0.00%
+balanced acc - 46.55%
+-------------------------------------
+
 video_mammen.mkv
 crop_params = [140, 420, 105, 103]
 trained -
@@ -72,16 +86,32 @@ balanced acc - 0.00%
 
 # Config
 LIVE_INFERENCE = False
+ACCEPT_ALL_FRAMES = False
+NEW_VID = True
 cv_src = 2 if LIVE_INFERENCE else Vid_source  # 2 for HDMI port
 IMAGE_SIZE = 224
-crop_params = [185, 120, 100, 90] # left, right, top, bottom
-end_time = 1 + 60 * 15 # 20 minutes
+crop_params = [185, 437, 135, 120] # left, right, top, bottom
+end_time = 1 + 60 * 33 # 15 minutes
+
+if NEW_VID:
+    red_avg = 40
+    blue_sum = 0.094
+    orange_avg = 35
+    green_avg = 0.31
+    color_avg = 9
+else:
+    red_avg = 0.00068
+    blue_sum = 0.0094
+    orange_avg = 0.00068
+    green_avg = 0.21
+    color_avg = 12
 
 ground_truth = [
-    {'class':'1', 'start': '00:15:33', 'end': '00:19:12'},
-    {'class':'2', 'start': '00:00:00', 'end': '00:08:40'},
-    {'class':'3', 'start': '00:09:07', 'end': '00:10:21'},
-    {'class':'3', 'start': '00:12:26', 'end': '00:13:00'}
+    {'class':'1', 'start': '00:00:18', 'end': '00:01:59'},
+    {'class':'2', 'start': '00:04:51', 'end': '00:07:14'},
+    {'class':'2', 'start': '00:26:18', 'end': '00:27:32'},
+    {'class':'3', 'start': '00:12:14', 'end': '00:18:36'},
+    {'class':'3', 'start': '00:29:57', 'end': '00:32:54'}
 ]
 
 
@@ -173,16 +203,16 @@ def avg_green(image, hsv):
 def isDisturbed(frame):
     hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    if (red_pixel_avg(frame, hsv_image) >= 0.00068 or blue_pixel_sum(frame, hsv_image) >= 0.0094):
+    if (red_pixel_avg(frame, hsv_image) >= red_avg or orange_pixel_avg(frame, hsv_image) >= orange_avg):
+        return True, "Camera feed"
+    
+    if (red_pixel_avg(frame, hsv_image) >= red_avg or blue_pixel_sum(frame, hsv_image) >= blue_sum):
         return True, "Doppler"
     
-    # if (red_pixel_avg(frame, hsv_image) >= 20 or orange_pixel_avg(frame, hsv_image) >= 20):
-    #     return True, "Camera feed"
-    
-    if (avg_pixel(frame) < 12):
+    if (avg_pixel(frame) < color_avg):
         return True, "Black frame"
     
-    if (avg_green(frame, hsv_image) > 0.21):
+    if (avg_green(frame, hsv_image) > green_avg):
         return True, "Green Cursor"
         
     return False, 'None'
@@ -225,7 +255,8 @@ with torch.no_grad():
 
             left, right, top, bottom = crop_params
             frame = frame[top:height - bottom, left:width - right]
-
+            
+            new_width, new_height = frame.shape[1], frame.shape[0]
 
             current_time = cap.get(cv2.CAP_PROP_POS_MSEC) 
             current_time = timedelta(milliseconds=current_time)
@@ -240,7 +271,7 @@ with torch.no_grad():
             cv2.putText(
                     frame,
                     current_time_format,
-                    (width - 387, height - 200),
+                    (new_width-100, new_height - 10),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.6,
                     (255, 255, 255),
@@ -250,7 +281,7 @@ with torch.no_grad():
 
             disturbance, reason = isDisturbed(frame)
 
-            if not disturbance:
+            if not disturbance or ACCEPT_ALL_FRAMES:
                 frame_tensor = preprocess_frame(frame)
 
                 prediction = model(frame_tensor.unsqueeze(0)).squeeze(0).softmax(0)
@@ -294,7 +325,7 @@ with torch.no_grad():
             init_time += elapsed_time
 
             cap.set(cv2.CAP_PROP_POS_MSEC, (init_time) * 1000 )
-            log.debug(f'moving to {elapsed_time}')
+            # log.debug(f'moving to {init_time * 1}')
             start_time = start_time + elapsed_time
 
             if cv2.waitKey(capture_fps) & 0xFF == ord("q"):
