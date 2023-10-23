@@ -85,7 +85,7 @@ balanced acc - 0.00%
 '''
 
 # Config
-LIVE_INFERENCE = False
+LIVE_INFERENCE = True
 ACCEPT_ALL_FRAMES = False
 NEW_VID = True
 cv_src = 2 if LIVE_INFERENCE else Vid_source  # 2 for HDMI port
