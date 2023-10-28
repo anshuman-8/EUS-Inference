@@ -69,8 +69,8 @@ Station 2 - 00:04:51 - 00:07:14
 Station 2 - 00:26:18 - 00:27:32
 Station 3 - 00:12:14 - 00:18:36
 Station 3 - 00:29:57 - 00:32:54
-acc - 0.00%
-balanced acc - 46.55%
+acc - 20.09%
+balanced acc - 54.16%
 -------------------------------------
 
 video_mammen.mkv
@@ -85,13 +85,13 @@ balanced acc - 0.00%
 '''
 
 # Config
-LIVE_INFERENCE = True
+LIVE_INFERENCE = False
 ACCEPT_ALL_FRAMES = False
 NEW_VID = True
 cv_src = 2 if LIVE_INFERENCE else Vid_source  # 2 for HDMI port
 IMAGE_SIZE = 224
 crop_params = [185, 437, 135, 120] # left, right, top, bottom
-end_time = 1 + 60 * 33 # 15 minutes
+end_time = 1 + 60 * 20 # 15 minutes
 
 if NEW_VID:
     red_avg = 40
@@ -217,6 +217,48 @@ def isDisturbed(frame):
         
     return False, 'None'
 
+def normalize_kernal_smoothening(all_predictions, fps, alpha=0.7):
+    def find_prob(pred, target):
+        maxs = pred[0]
+        for x in pred:
+            if x.argmax() == target and maxs.max() > x.max():
+                maxs = x
+        return maxs
+
+    start = 0
+    for i in range(fps, len(all_predictions), fps):
+        max_prediction = [x.argmax().item() for x in all_predictions[start:i]]
+        if i == 0:
+            max_prediction[x] = max(
+                0,
+                min(
+                    1,
+                    max_prediction[x] * (1 - alpha)
+                    + max_prediction[x + 1] * (alpha / 2),
+                )
+            )
+            all_predictions[x] = find_prob(
+                all_predictions[x : x + 1], max_prediction[x]
+            )
+        for x in range(1, len(max_prediction) - 1):
+            max_prediction[x] = max(
+                0,
+                min(
+                    1,
+                    max_prediction[x] * (1 - alpha)
+                    + max_prediction[x - 1] * (alpha / 2)
+                    + max_prediction[x + 1]
+                )
+            )
+            all_predictions[x] = find_prob(
+                all_predictions[x - 1 : x + 2], max_prediction[x]
+            )
+        start = i
+    max_prediction[-1] = max(
+        0, min(1, max_prediction[-1] * (1 - alpha) + max_prediction[-2] * (alpha / 2))
+    )
+    all_predictions[-1] = find_prob(all_predictions[-2:], max_prediction[-1])
+    return all_predictions
 
 # Convert ground truth times to seconds
 for entry in ground_truth:
@@ -241,7 +283,7 @@ correct_predictions = 0
 total_predictions = 0
 actual = []
 predicted = []
-
+all_predictions = []
 with torch.no_grad():
         start_time = time.time()
         init_time = 0
@@ -262,8 +304,7 @@ with torch.no_grad():
             current_time = timedelta(milliseconds=current_time)
             current_time_format = f"{current_time.seconds//3600:02}:{(current_time.seconds%3600)//60:02}:{current_time.seconds%60:02}"
 
-            
-            if current_time.seconds > end_time:
+            if current_time.seconds >= end_time:
                 log.info("End of video reached.")
                 log.info(f"Accuracy: {correct_predictions/total_predictions*100:.2f}%")
                 break
@@ -298,6 +339,7 @@ with torch.no_grad():
                         
                         actual.append(entry['class'])
                         predicted.append(station_class[prediction_class])
+                        all_predictions.append(prediction)
                         total_predictions += 1
 
                 for i in range(3):
@@ -335,5 +377,15 @@ with torch.no_grad():
 cap.release()
 cv2.destroyAllWindows()
 
+log.info(f"Accuracy: {correct_predictions/total_predictions*100:.2f}%")
+
 balanced_accuracy = balanced_accuracy_score(actual, predicted)    
 log.info(f"Balanced accuracy: {balanced_accuracy*100:.2f}%")
+
+all_predictions = normalize_kernal_smoothening(all_predictions, 10)
+log.info(f'Normalized predictions balance Accuracy: {all_predictions}')
+
+all_predictions = [station_class[x.argmax().item()] for x in all_predictions]
+
+log.info(f'Normalized predictions balance Accuracy: {balanced_accuracy_score(actual, all_predictions)*100:.2f}%')
+
