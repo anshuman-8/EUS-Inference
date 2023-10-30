@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
+from PIL import Image
 import logging as log
 from torchvision import transforms
-from PIL import Image
 
 def avg_pixel(image):
     average = image.mean()
