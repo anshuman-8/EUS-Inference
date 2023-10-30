@@ -1,8 +1,8 @@
 import torch
 import cv2
 import logging as log
-from Inference.model import TestLightningModule
-from Inference.utils import isDisturbed, preprocess_frame
+from src.Inference.model import TestLightningModule
+from src.Inference.utils import isDisturbed, preprocess_frame
 
 class Inference:
     def __init__(self, model, device="cuda"):

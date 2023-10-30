@@ -4,9 +4,9 @@ import numpy as np
 import logging as log
 from PyQt5.QtCore import pyqtSignal, QThread
 
-from Inference.main import Inference
-from Inference.model import TestLightningModule
-from Inference.utils import isDisturbed, preprocess_frame
+from src.Inference.main import Inference
+from src.Inference.model import TestLightningModule
+from src.Inference.utils import isDisturbed, preprocess_frame
 
 
 class VideoThread(QThread):
