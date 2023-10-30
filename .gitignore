@@ -378,6 +378,7 @@ FodyWeavers.xsd
 *.sln.iml
 
 venv
+.env
 testing/checkpoint/*
 testing/data/*
 
