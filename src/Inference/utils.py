@@ -61,7 +61,6 @@ def avg_green(image, hsv):
 def isDisturbed(frame):
     hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    log.info(f'{red_pixel_avg(frame, hsv_image)=} - {orange_pixel_avg(frame, hsv_image)=} - {blue_pixel_sum(frame, hsv_image)=} - {avg_pixel(frame)=} - {avg_green(frame, hsv_image)=}')
     if (red_pixel_avg(frame, hsv_image) >= 3 or orange_pixel_avg(frame, hsv_image) >= 5 or avg_green(frame, hsv_image) >= 50):
         return True, "Camera feed"
     

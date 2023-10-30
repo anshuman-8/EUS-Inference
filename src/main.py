@@ -3,20 +3,20 @@ import cv2
 import numpy as np
 from PyQt5 import QtGui
 from PyQt5.QtCore import pyqtSlot, Qt
-from video_capture import VideoThread
+from src.video_capture import VideoThread
 from PyQt5.QtGui import QPixmap, QPainter
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
 
 
 class App(QWidget):
-    def __init__(self, model:str, vid_src:int=2):
+    def __init__(self, model:str, vid_src:int = 2):
         super().__init__()
         # Inference details
         self.model_path = model
         self.vid_src = vid_src
 
         # Window init
-        self.setWindowTitle("Qt live label demo")
+        self.setWindowTitle("EUS - ML")
         self.setFixedSize(800, 800)
         self.disply_width = 640
         self.display_height = 640
@@ -81,10 +81,8 @@ class App(QWidget):
             "padding: 10px 20px;"
             "text-align: center;"
             "text-decoration: none;"
-            "display: inline-block;"
             "font-size: 16px;"
             "margin: 4px 2px;"
-            "cursor: pointer;"
             "border-radius: 10px;"
             "}"
             "QPushButton:hover {background-color: #45a049;}"  # Darker green on hover
@@ -131,10 +129,8 @@ class App(QWidget):
             "padding: 10px 20px;"
             "text-align: center;"
             "text-decoration: none;"
-            "display: inline-block;"
             "font-size: 16px;"
             "margin: 4px 2px;"
-            "cursor: pointer;"
             "border-radius: 10px;"
             "}"
             "QPushButton:hover {background-color: #45a049;}"  # Darker green on hover
@@ -200,9 +196,3 @@ class App(QWidget):
         p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
     
-
-if __name__=="__main__":
-    app = QApplication(sys.argv)
-    a = App("./checkpoints/d72fb346-f652-4605-9039-856ca4315bc2.ckpt")
-    a.show()
-    sys.exit(app.exec_())

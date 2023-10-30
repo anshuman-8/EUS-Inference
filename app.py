@@ -1,10 +1,8 @@
 import torch
 import sys
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication
-from Inference.home import MainApplication
+from PyQt5.QtWidgets import  QApplication
 import logging as log
+from src.main import App
 
 def main():
     log.basicConfig(
@@ -20,7 +18,7 @@ def main():
     log.info(f"Device: {device}")
 
     inference_config = {
-        'checkpoint_path': 'checkpoints/epoch=9.ckpt',
+        'checkpoint_path': 'checkpoints/d72fb346-f652-4605-9039-856ca4315bc2.ckpt',
         'device':  device,
         'image_size': 224,
         'mean': [0.22782720625400543, 0.22887665033340454, 0.23145385086536407],
@@ -33,10 +31,9 @@ def main():
     }
 
     app = QApplication(sys.argv)
-    ex = MainApplication()
-    sys.exit(app.exec())
-
-
+    a = App("./checkpoints/d72fb346-f652-4605-9039-856ca4315bc2.ckpt")
+    a.show()
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
