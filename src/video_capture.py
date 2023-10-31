@@ -5,7 +5,6 @@ import logging as log
 from PyQt5.QtCore import pyqtSignal, QThread
 
 from src.Inference.main import Inference
-from src.Inference.model import TestLightningModule
 from src.Inference.utils import isDisturbed, preprocess_frame
 
 
@@ -27,14 +26,15 @@ class VideoThread(QThread):
 
             if not ret:
                 log.error(" Unable to capture frame.")
-                self.no_video_signal.emit()  # Emit signal when no video input
+                self.no_video_signal.emit() # Emit signal when no video input
+                self.prediction_signal.emit('-')
                 break
 
             new_width, new_height = frame.shape[1], frame.shape[0]
 
             if self.inference:
                 frame, station = self.EUSInference.perform_inference_on_frame(frame)
-                if station is not None:
+                if station is not None and self.inference:
                     self.prediction_signal.emit(station)
                 else:
                     self.prediction_signal.emit('-')
@@ -56,9 +56,12 @@ class VideoThread(QThread):
     def stop_inference(self):
         self.inference = False
         self.EUSInference = None
+        log.debug("Inference model stopped")
+        self.prediction_signal.emit('-')
 
 
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
         self._run_flag = False
+
         self.wait()
