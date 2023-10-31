@@ -1,6 +1,7 @@
 import sys
 import cv2
 import numpy as np
+import logging as log
 from PyQt5 import QtGui
 from PyQt5.QtCore import pyqtSlot, Qt
 from src.video_capture import VideoThread
@@ -17,35 +18,22 @@ class App(QWidget):
 
         # Window init
         self.setWindowTitle("EUS - ML")
-        self.setFixedSize(800, 800)
-        self.disply_width = 640
-        self.display_height = 640
+        self.setFixedSize(950, 900)
+        self.disply_width = 900
+        self.display_height = 800
 
-        # create the label that holds the image
+        # Label that holds the image
         self.image_label = QLabel(self)
         self.image_label.setFixedSize(self.disply_width, self.display_height)  # Set fixed label size
 
-        # create a text label
-        self.textLabel = QLabel('EUSML Inference')
+        # Text label
+        self.textLabel = QLabel('EUS Prediction')
         self.textLabel.setStyleSheet(
             "QLabel {"
             "color: white;"
             "font-size: 20px;"
             "}"
         )
-
-        # Inference block
-        # create a vertical box layout and add the two labels
-        vbox = QVBoxLayout(self)
-        vbox.addWidget(self.image_label, alignment=Qt.AlignCenter)  # Align label to center
-        vbox.addWidget(self.textLabel, alignment=Qt.AlignCenter)
-        # set the vbox layout as the widgets layout
-        self.setLayout(vbox)
-
-        # Set a background color for the widget
-        palette = self.palette()
-        palette.setColor(QtGui.QPalette.Window, QtGui.QColor(50, 50, 50))  # Dark gray background
-        self.setPalette(palette)
 
         # create an empty placeholder pixmap
         self.placeholder_pixmap = QPixmap(self.disply_width, self.display_height)
@@ -56,22 +44,34 @@ class App(QWidget):
         font = painter.font()
         font.setPointSize(20)
         painter.setFont(font)
-        painter.drawText(self.disply_width//4, self.display_height//2, "No video source")
+        painter.drawText(self.disply_width//4, self.display_height//2, "No video source found :(")
 
         # create a flag to track if video input is available
         self.video_available = True
 
         # create the video capture thread
         self.thread = VideoThread()
-        # connect its signal to the update_image slot
         self.thread.change_pixmap_signal.connect(self.update_image)
-        # start the thread
-        self.thread.start()
+        self.thread.start() #start the thread
 
         # connect the no_video_signal to the update_no_video method
         self.thread.no_video_signal.connect(self.update_no_video)
 
-        self.start_button = QPushButton('Start Inference ', self)
+        # Inference block
+        # Vertical box layout 
+        vbox = QVBoxLayout(self)
+        vbox.addWidget(self.image_label, alignment=Qt.AlignCenter)  # Align label to center
+        vbox.addWidget(self.textLabel, alignment=Qt.AlignCenter)
+        # set the vbox layout as the widgets layout
+        self.setLayout(vbox)
+
+        # Background color
+        palette = self.palette()
+        palette.setColor(QtGui.QPalette.Window, QtGui.QColor(50, 50, 60))  # Dark gray background
+        self.setPalette(palette)
+
+        #Start button
+        self.start_button = QPushButton('Start Prediction ', self)
         self.start_button.setFixedSize(200, 45)
         self.start_button.setStyleSheet(
             "QPushButton {"
@@ -90,12 +90,12 @@ class App(QWidget):
         )
         self.start_button.clicked.connect(self.toggle_inference)
 
-        # Create a refresh button
+        # Refresh button
         self.refresh_button = QPushButton('Refresh', self)
         self.refresh_button.clicked.connect(self.refresh_video_source)
         vbox.addWidget(self.refresh_button, alignment=Qt.AlignCenter)
 
-        self.setStyle(self.refresh_button)
+        self.setButtonStyle(self.refresh_button)
 
         # Horizontal layout for buttons and inference results
         hbox = QHBoxLayout()
@@ -118,8 +118,8 @@ class App(QWidget):
 
         vbox.addLayout(hbox)
 
-    def setStyle(self, widget):
-        # Set common style for buttons
+    def setButtonStyle(self, widget):
+        """Set common style for buttons"""
         widget.setFixedSize(200, 45)
         widget.setStyleSheet(
             "QPushButton {"
@@ -151,7 +151,12 @@ class App(QWidget):
         self.thread.start()
 
     def toggle_inference(self):
+        """To Start and Stop the inference """
         # Perform model inference on frames
+        if self.video_available is False:
+            self.textLabel.setText('No video source found ')
+            return
+        
         if self.thread.inference:
             self.textLabel.setText('Stopping ... ')
             self.thread.stop_inference()
@@ -162,12 +167,20 @@ class App(QWidget):
         self.textLabel.setText('Starting ... ')
         self.textLabel.setText('EUSML Inference Running')  # Update label text
         self.thread.start_inference(model_path=self.model_path)  # Start inference  
+        self.thread.inference = True
         self.start_button.setText('Stop Inference')
 
     @pyqtSlot()
     def update_no_video(self):
         """Updates the image_label with a placeholder pixmap when no video input"""
+
+        log.info("shifting to Video placeholder ")
         if self.video_available:
+            
+            if self.thread.inference:
+                self.toggle_inference()
+                log.info("Inference stopped")
+
             self.image_label.setPixmap(self.placeholder_pixmap)
             painter = QPainter(self.placeholder_pixmap)
             font = painter.font()
@@ -185,6 +198,10 @@ class App(QWidget):
 
     @pyqtSlot(str)
     def update_inference_result(self, prediction):
+        """Updates the Station prediction label"""
+        if self.video_available is False:
+            self.inference_result.setText(f'')
+            return
         self.inference_result.setText(f'Station: {prediction}')
     
     def convert_cv_qt(self, cv_img):
