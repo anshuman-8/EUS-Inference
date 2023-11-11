@@ -6,7 +6,7 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import pyqtSlot, Qt
 from src.video_capture import VideoThread
 from PyQt5.QtGui import QPixmap, QPainter
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QPushButton, QVBoxLayout, QHBoxLayout
 
 
 class App(QWidget):
@@ -20,7 +20,7 @@ class App(QWidget):
         self.setWindowTitle("EUS - ML")
         self.setFixedSize(950, 900)
         self.disply_width = 900
-        self.display_height = 800
+        self.display_height = 730
 
         # Label that holds the image
         self.image_label = QLabel(self)
@@ -31,7 +31,7 @@ class App(QWidget):
         self.textLabel.setStyleSheet(
             "QLabel {"
             "color: white;"
-            "font-size: 20px;"
+            "font-size: 30px;"
             "}"
         )
 
@@ -57,11 +57,23 @@ class App(QWidget):
         # connect the no_video_signal to the update_no_video method
         self.thread.no_video_signal.connect(self.update_no_video)
 
+        self.error_message_box = QLabel('')
+        self.error_message_box.setStyleSheet(
+            "QLabel {"
+            "color: red;"  
+            "font-size: 18px;"
+            "}"
+        )
+        self.error_message_box.setAlignment(Qt.AlignCenter)
+        self.error_message_box.setFixedSize(self.disply_width, 30)
+
         # Inference block
         # Vertical box layout 
         vbox = QVBoxLayout(self)
         vbox.addWidget(self.image_label, alignment=Qt.AlignCenter)  # Align label to center
         vbox.addWidget(self.textLabel, alignment=Qt.AlignCenter)
+        # vbox.addWidget(self.error_message_box, alignment=Qt.AlignCenter)
+
         # set the vbox layout as the widgets layout
         self.setLayout(vbox)
 
@@ -99,9 +111,11 @@ class App(QWidget):
 
         # Horizontal layout for buttons and inference results
         hbox = QHBoxLayout()
-        hbox.addWidget(self.start_button, alignment=Qt.AlignCenter)
-        hbox.addWidget(self.refresh_button, alignment=Qt.AlignCenter)
-        hbox.addStretch(1)  # Add spacing between buttons and results
+
+        controlv = QVBoxLayout()
+        controlv.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        controlv.addWidget(self.refresh_button, alignment=Qt.AlignCenter)
+        controlv.addStretch(1)  # Add spacing between buttons and results
 
         # Placeholder for inference results
         self.inference_result = QLabel('', self)
@@ -114,9 +128,13 @@ class App(QWidget):
             "}"
         )
         self.inference_result.setFixedSize(200, 45)
+
+        hbox.addLayout(controlv)
         hbox.addWidget(self.inference_result, alignment=Qt.AlignCenter)
 
         vbox.addLayout(hbox)
+
+        self.inference_running = False
 
     def setButtonStyle(self, widget):
         """Set common style for buttons"""
@@ -135,6 +153,13 @@ class App(QWidget):
             "}"
             "QPushButton:hover {background-color: #45a049;}"  # Darker green on hover
         )
+    
+    def update_image_border(self):
+        """Updates the frame border based on the inference state"""
+        if self.inference_running:
+            self.image_label.setStyleSheet("border: 2px solid green;")
+        else:
+            self.image_label.setStyleSheet("border: 0px;")
 
     def closeEvent(self, event):
         self.thread.stop()
@@ -162,6 +187,8 @@ class App(QWidget):
             self.thread.stop_inference()
             self.textLabel.setText('EUSML Inference Stopped')
             self.start_button.setText('Start Inference')
+            self.inference_running = False
+            self.update_image_border()
             return
         
         self.textLabel.setText('Starting ... ')
@@ -169,6 +196,8 @@ class App(QWidget):
         self.thread.start_inference(model_path=self.model_path)  # Start inference  
         self.thread.inference = True
         self.start_button.setText('Stop Inference')
+        self.inference_running = True
+        self.update_image_border()
 
     @pyqtSlot()
     def update_no_video(self):
@@ -176,7 +205,7 @@ class App(QWidget):
 
         log.info("shifting to Video placeholder ")
         if self.video_available:
-            
+
             if self.thread.inference:
                 self.toggle_inference()
                 log.info("Inference stopped")
@@ -193,6 +222,13 @@ class App(QWidget):
     def update_image(self, cv_img):
         """Updates the image_label with a new opencv image"""
         qt_img = self.convert_cv_qt(cv_img)
+
+        # Set the frame border color based on the inference state
+        if self.inference_running:
+            self.image_label.setStyleSheet("border: 2px solid green;")
+        else:
+            self.image_label.setStyleSheet("border: 0px;")
+
         self.image_label.setPixmap(qt_img)
         self.video_available = True  # Set video_available flag to True
 
@@ -200,6 +236,7 @@ class App(QWidget):
     def update_inference_result(self, prediction):
         """Updates the Station prediction label"""
         if self.video_available is False:
+            log.debug("No prediction as no video source found")
             self.inference_result.setText(f'')
             return
         self.inference_result.setText(f'Station: {prediction}')

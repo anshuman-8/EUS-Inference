@@ -31,11 +31,11 @@ class Inference:
             cv2.putText(
                 frame,
                 reason,
-                (10, 60),
+                (4, 25),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                2.2,
+                0.9,
                 (0, 0, 255),
-                3,
+                2,
                 cv2.LINE_AA,
             )
             log.info("Image is disturbed reason: " + reason)
@@ -53,16 +53,16 @@ class Inference:
         # paste inference results
         for i in range(3):
             text = f"Station {self.station_class[i]}: {prediction[i].item()*100:.2f}%"
-            position = (10, (i + 1) * 60)
+            position = (4, (i + 1) * 25)
             color = (255, 255, 255)
             cv2.putText(
                 frame,
                 text,
                 position,
                 cv2.FONT_HERSHEY_SIMPLEX,
-                2.2,
+                0.9,
                 color,
-                3,
+                2,
                 cv2.LINE_AA,
             )
 
