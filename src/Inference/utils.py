@@ -59,6 +59,9 @@ def avg_green(image, hsv):
     return average
 
 def isDisturbed(frame):
+    """
+    Checks if the image is disturbed, i.e. if image is Camera feed, Doppler, Black frame or Green Cursor
+    """
     hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     if (red_pixel_avg(frame, hsv_image) >= 3 or orange_pixel_avg(frame, hsv_image) >= 5 or avg_green(frame, hsv_image) >= 50):
@@ -89,6 +92,12 @@ transforms = transforms.Compose(
 
 
 def preprocess_frame(frame):
+    """Preprocess the frame"""
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     frame = Image.fromarray(frame)
     return transforms(frame)
+
+def crop_frame(frame, crop_dim):
+    """Crop the frame to the given dimensions [T, B, L, R] """
+    frame = frame[crop_dim[0]:-crop_dim[1], crop_dim[2]:-crop_dim[3]]
+    return frame

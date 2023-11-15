@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import logging as log
 from PyQt5 import QtGui
+from typing import Dict, Any
 from PyQt5.QtCore import pyqtSlot, Qt
 from src.video_capture import VideoThread
 from PyQt5.QtGui import QPixmap, QPainter
@@ -10,17 +11,17 @@ from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QPushButton, QVBoxLayo
 
 
 class App(QWidget):
-    def __init__(self, model:str, vid_src:int = 2):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__()
         # Inference details
-        self.model_path = model
-        self.vid_src = vid_src
+        self.model_path = config["checkpoint_path"]
+        self.vid_src = config["checkpoint_path"] or 2
 
         # Window init
         self.setWindowTitle("EUS - ML")
         self.setFixedSize(950, 900)
         self.disply_width = 900
-        self.display_height = 730
+        self.display_height = 710
 
         # Label that holds the image
         self.image_label = QLabel(self)
@@ -70,8 +71,10 @@ class App(QWidget):
         # Inference block
         # Vertical box layout 
         vbox = QVBoxLayout(self)
-        vbox.addWidget(self.image_label, alignment=Qt.AlignCenter)  # Align label to center
+        vbox.addWidget(self.image_label, alignment=Qt.AlignCenter)  
         vbox.addWidget(self.textLabel, alignment=Qt.AlignCenter)
+        
+        vbox.addStretch(1)
         # vbox.addWidget(self.error_message_box, alignment=Qt.AlignCenter)
 
         # set the vbox layout as the widgets layout
@@ -166,6 +169,7 @@ class App(QWidget):
         event.accept()
 
     def refresh_video_source(self):
+        """Refresh the video source"""
         # Stop the current thread
         self.thread.stop()
 
@@ -217,6 +221,7 @@ class App(QWidget):
             painter.setFont(font)
             painter.drawText(self.disply_width//4, self.display_height//2, "No video source")
             self.video_available = False
+            self.inference_result.setText('-')
 
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
