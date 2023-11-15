@@ -13,28 +13,21 @@ from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QPushButton, QVBoxLayo
 class App(QWidget):
     def __init__(self, config: Dict[str, Any]):
         super().__init__()
-        # Inference details
-        self.model_path = config["checkpoint_path"]
-        self.vid_src = config["checkpoint_path"] or 2
+
+        # App config
+        self.config = config
 
         # Window init
         self.setWindowTitle("EUS - ML")
-        self.setFixedSize(950, 900)
-        self.disply_width = 900
-        self.display_height = 710
+        self.setFixedSize(config['window_width'], config['window_height'])
+
+        self.disply_width = config['display_width']
+        self.display_height = config['display_height']
 
         # Label that holds the image
         self.image_label = QLabel(self)
         self.image_label.setFixedSize(self.disply_width, self.display_height)  # Set fixed label size
 
-        # Text label
-        self.textLabel = QLabel('EUS Prediction')
-        self.textLabel.setStyleSheet(
-            "QLabel {"
-            "color: white;"
-            "font-size: 30px;"
-            "}"
-        )
 
         # create an empty placeholder pixmap
         self.placeholder_pixmap = QPixmap(self.disply_width, self.display_height)
@@ -51,12 +44,21 @@ class App(QWidget):
         self.video_available = True
 
         # create the video capture thread
-        self.thread = VideoThread()
+        self.thread = VideoThread(config=config)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start() #start the thread
 
         # connect the no_video_signal to the update_no_video method
         self.thread.no_video_signal.connect(self.update_no_video)
+
+        # Text label
+        self.textLabel = QLabel('EUS Prediction')
+        self.textLabel.setStyleSheet(
+            "QLabel {"
+            "color: white;"
+            "font-size: 30px;"
+            "}"
+        )
 
         self.error_message_box = QLabel('')
         self.error_message_box.setStyleSheet(
@@ -87,30 +89,15 @@ class App(QWidget):
 
         #Start button
         self.start_button = QPushButton('Start Prediction ', self)
-        self.start_button.setFixedSize(200, 45)
-        self.start_button.setStyleSheet(
-            "QPushButton {"
-            "background-color: #4CAF50;"  # Green background
-            "border: none;"
-            "color: white;"
-            "padding: 10px 20px;"
-            "text-align: center;"
-            "text-decoration: none;"
-            "font-size: 16px;"
-            "margin: 4px 2px;"
-            "border-radius: 10px;"
-            "}"
-            "QPushButton:hover {background-color: #45a049;}"  # Darker green on hover
-            "QPushButton:pressed {background-color: #FF5733;}"  # Red when pressed
-        )
+        self.start_button.setFixedSize(200, 50)
+        self.setButtonStyle(self.start_button)
         self.start_button.clicked.connect(self.toggle_inference)
 
         # Refresh button
         self.refresh_button = QPushButton('Refresh', self)
-        self.refresh_button.clicked.connect(self.refresh_video_source)
         vbox.addWidget(self.refresh_button, alignment=Qt.AlignCenter)
-
         self.setButtonStyle(self.refresh_button)
+        self.refresh_button.clicked.connect(self.refresh_video_source)
 
         # Horizontal layout for buttons and inference results
         hbox = QHBoxLayout()
@@ -155,6 +142,7 @@ class App(QWidget):
             "border-radius: 10px;"
             "}"
             "QPushButton:hover {background-color: #45a049;}"  # Darker green on hover
+            "QPushButton:pressed {background-color: #FF5733;}"  # Red when pressed
         )
     
     def update_image_border(self):
@@ -165,6 +153,7 @@ class App(QWidget):
             self.image_label.setStyleSheet("border: 0px;")
 
     def closeEvent(self, event):
+        """Shuts down the thread on app close"""
         self.thread.stop()
         event.accept()
 
@@ -174,7 +163,7 @@ class App(QWidget):
         self.thread.stop()
 
         # Start a new thread to capture video
-        self.thread = VideoThread()
+        self.thread = VideoThread(config=self.config)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.no_video_signal.connect(self.update_no_video)
         self.thread.start()
@@ -197,7 +186,8 @@ class App(QWidget):
         
         self.textLabel.setText('Starting ... ')
         self.textLabel.setText('EUSML Inference Running')  # Update label text
-        self.thread.start_inference(model_path=self.model_path)  # Start inference  
+        log.debug(f"Starting inference using checkpoint {self.config['checkpoint_path']} ")
+        self.thread.start_inference()  # Start inference  
         self.thread.inference = True
         self.start_button.setText('Stop Inference')
         self.inference_running = True

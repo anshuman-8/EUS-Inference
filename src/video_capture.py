@@ -2,10 +2,10 @@ import sys
 import cv2
 import numpy as np
 import logging as log
+from typing import Dict, Any
 from PyQt5.QtCore import pyqtSignal, QThread
 
 from src.Inference.main import Inference
-from src.Inference.utils import isDisturbed, preprocess_frame
 
 
 class VideoThread(QThread):
@@ -13,15 +13,17 @@ class VideoThread(QThread):
     no_video_signal = pyqtSignal()
     prediction_signal = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__()
         self._run_flag = True
         self.inference = False
         self.EUSInference = None
+        self.config = config
 
     def run(self):
         """Capture video from camera and send frames to main thread using signals."""
-        cap = cv2.VideoCapture(2)
+        video_source = self.config.get('video_source', 2)
+        cap = cv2.VideoCapture(video_source)
         while self._run_flag:
             ret, frame = cap.read()
 
@@ -30,8 +32,6 @@ class VideoThread(QThread):
                 self.no_video_signal.emit() # Emit signal when no video input
                 self.prediction_signal.emit('-')
                 break
-
-            new_width, new_height = frame.shape[1], frame.shape[0]
 
             if self.inference:
                 frame, station = self.EUSInference.perform_inference_on_frame(frame)
@@ -44,14 +44,14 @@ class VideoThread(QThread):
             
         cap.release()
 
-    def start_inference(self, model_path):
+    def start_inference(self):
         """Sets inference flag to True and loads model"""
         try:
-            self.EUSInference = Inference(model=model_path)
+            self.EUSInference = Inference(config = self.config)
         except Exception as e:
             log.error(f"Unable to load model.\n{e}")
             self.stop()
-            exit()
+            exit(1)
 
         self.inference = True
 

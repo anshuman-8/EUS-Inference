@@ -4,6 +4,7 @@ from PIL import Image
 import logging as log
 from torchvision import transforms
 
+
 def avg_pixel(image):
     average = image.mean()
     return average
@@ -22,7 +23,6 @@ def red_pixel_avg(image, hsv):
 
 
 def orange_pixel_avg(image, hsv):
-
     lower_orange = np.array([5, 100, 100])
     upper_orange = np.array([25, 255, 255])
 
@@ -35,7 +35,6 @@ def orange_pixel_avg(image, hsv):
 
 
 def blue_pixel_sum(image, hsv):
-
     lower_blue = np.array([100, 150, 0], np.uint8)
     upper_blue = np.array([140, 255, 255], np.uint8)
 
@@ -46,8 +45,8 @@ def blue_pixel_sum(image, hsv):
 
     return average
 
-def avg_green(image, hsv):
 
+def avg_green(image, hsv):
     lower_green = np.array([36, 25, 25], np.uint8)
     upper_green = np.array([70, 255, 255], np.uint8)
 
@@ -58,46 +57,55 @@ def avg_green(image, hsv):
 
     return average
 
+
 def isDisturbed(frame):
     """
     Checks if the image is disturbed, i.e. if image is Camera feed, Doppler, Black frame or Green Cursor
     """
     hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    if (red_pixel_avg(frame, hsv_image) >= 3 or orange_pixel_avg(frame, hsv_image) >= 5 or avg_green(frame, hsv_image) >= 50):
+    if (
+        red_pixel_avg(frame, hsv_image) >= 3
+        or orange_pixel_avg(frame, hsv_image) >= 5
+        or avg_green(frame, hsv_image) >= 50
+    ):
         return True, "Camera feed"
-    
-    if (red_pixel_avg(frame, hsv_image) >= 3 or blue_pixel_sum(frame, hsv_image) >= 0.094):
+
+    if (
+        red_pixel_avg(frame, hsv_image) >= 3
+        or blue_pixel_sum(frame, hsv_image) >= 0.094
+    ):
         return True, "Doppler"
-    
-    if (avg_pixel(frame) < 9):
+
+    if avg_pixel(frame) < 9:
         return True, "Black frame"
-    
-    if (avg_green(frame, hsv_image) > 0.31):
+
+    if avg_green(frame, hsv_image) > 0.31:
         return True, "Green Cursor"
-        
-    return False, 'None'
+
+    return False, "None"
 
 
-transforms = transforms.Compose(
-    [
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            [0.22782720625400543, 0.22887665033340454, 0.23145385086536407],
-            [0.11017259210348129, 0.11015155166387558, 0.11037711054086685],
-        ),
-    ]
-)
-
-
-def preprocess_frame(frame):
+def preprocess_frame(frame, image_size, mean, std):
     """Preprocess the frame"""
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     frame = Image.fromarray(frame)
-    return transforms(frame)
+
+    transform = transforms.Compose(
+        [
+            transforms.Resize((image_size, image_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=mean,
+                std=std,
+            ),
+        ]
+    )
+
+    return transform(frame)
+
 
 def crop_frame(frame, crop_dim):
-    """Crop the frame to the given dimensions [T, B, L, R] """
-    frame = frame[crop_dim[0]:-crop_dim[1], crop_dim[2]:-crop_dim[3]]
+    """Crop the frame to the given dimensions [T, B, L, R]"""
+    frame = frame[crop_dim[0] : -crop_dim[1] + 1, crop_dim[2] : -crop_dim[3] + 1]
     return frame

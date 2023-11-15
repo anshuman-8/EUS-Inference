@@ -11,7 +11,9 @@ class Inference:
         self.model_path = config["checkpoint_path"]
         self.device = config["device"] if torch.cuda.is_available() else "cpu"
         self.model = None
-        self.crop_dim = config["crop_dim"]
+        self.crop_dim = config.get("crop_dim", [0,0,0,0])
+        self.station_class = {0: '1', 1: '2', 2: '3'}
+        self.config = config
 
         try:
             self.model = TestLightningModule.load_from_checkpoint(
@@ -24,10 +26,9 @@ class Inference:
             log.error(f"Unable to load model.\n{e}")
             raise e
         
-        self.station_class = {0: '1', 1: '2', 2: '3'}
 
     def perform_inference_on_frame(self, frame):
-        # check if image disturbed
+        """Performs inference on a single frame"""
         disturbance, reason = isDisturbed(frame)
 
         if disturbance:
@@ -46,8 +47,8 @@ class Inference:
             return frame, None
         
         # preprocess the frame
-        frame_tensor = preprocess_frame(frame)
-        frame_tensor = crop_frame(frame_tensor,self.crop_dim)
+        frame_tensor = crop_frame(frame,self.crop_dim)
+        frame_tensor = preprocess_frame(frame_tensor, self.config["image_size"], self.config["mean"], self.config["std"])
 
         # perform inference
         prediction = self.model(frame_tensor.unsqueeze(0)).squeeze(0).softmax(0)
