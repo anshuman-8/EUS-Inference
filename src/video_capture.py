@@ -20,6 +20,7 @@ class VideoThread(QThread):
         self.EUSInference = None
 
     def run(self):
+        """Capture video from camera and send frames to main thread using signals."""
         cap = cv2.VideoCapture(2)
         while self._run_flag:
             ret, frame = cap.read()
@@ -44,6 +45,7 @@ class VideoThread(QThread):
         cap.release()
 
     def start_inference(self, model_path):
+        """Sets inference flag to True and loads model"""
         try:
             self.EUSInference = Inference(model=model_path)
         except Exception as e:
@@ -54,6 +56,7 @@ class VideoThread(QThread):
         self.inference = True
 
     def stop_inference(self):
+        """Sets inference flag to False"""
         self.inference = False
         self.EUSInference = None
         log.debug("Inference model stopped")

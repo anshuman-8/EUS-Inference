@@ -1,15 +1,18 @@
 import torch
 import cv2
 import logging as log
+from typing import Dict, Any
 from src.Inference.model import TestLightningModule
-from src.Inference.utils import isDisturbed, preprocess_frame
+from src.Inference.utils import isDisturbed, preprocess_frame, crop_frame
 
 class Inference:
-    def __init__(self, model, device="cuda"):
+    def __init__(self, config: Dict[str, Any]):
         # init model
-        self.model_path = model
-        self.device = 'cpu'
+        self.model_path = config["checkpoint_path"]
+        self.device = config["device"] if torch.cuda.is_available() else "cpu"
         self.model = None
+        self.crop_dim = config["crop_dim"]
+
         try:
             self.model = TestLightningModule.load_from_checkpoint(
                 self.model_path, map_location=self.device
@@ -44,6 +47,7 @@ class Inference:
         
         # preprocess the frame
         frame_tensor = preprocess_frame(frame)
+        frame_tensor = crop_frame(frame_tensor,self.crop_dim)
 
         # perform inference
         prediction = self.model(frame_tensor.unsqueeze(0)).squeeze(0).softmax(0)
