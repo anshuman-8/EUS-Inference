@@ -94,9 +94,9 @@ crop_params = [185, 437, 135, 120] # left, right, top, bottom
 end_time = 1 + 60 * 20 # 15 minutes
 
 if NEW_VID:
-    red_avg = 40
+    red_avg = 3
     blue_sum = 0.094
-    orange_avg = 35
+    orange_avg = 5
     green_avg = 0.31
     color_avg = 9
 else:
@@ -203,7 +203,8 @@ def avg_green(image, hsv):
 def isDisturbed(frame):
     hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    if (red_pixel_avg(frame, hsv_image) >= red_avg or orange_pixel_avg(frame, hsv_image) >= orange_avg):
+    log.info(f'{red_pixel_avg(frame, hsv_image)=} - {orange_pixel_avg(frame, hsv_image)=} - {blue_pixel_sum(frame, hsv_image)=} - {avg_pixel(frame)=} - {avg_green(frame, hsv_image)=}')
+    if (red_pixel_avg(frame, hsv_image) >= red_avg or orange_pixel_avg(frame, hsv_image) >= orange_avg or avg_green(frame, hsv_image) >= 50):
         return True, "Camera feed"
     
     if (red_pixel_avg(frame, hsv_image) >= red_avg or blue_pixel_sum(frame, hsv_image) >= blue_sum):
@@ -367,7 +368,6 @@ with torch.no_grad():
             init_time += elapsed_time
 
             cap.set(cv2.CAP_PROP_POS_MSEC, (init_time) * 1000 )
-            # log.debug(f'moving to {init_time * 1}')
             start_time = start_time + elapsed_time
 
             if cv2.waitKey(capture_fps) & 0xFF == ord("q"):
@@ -389,3 +389,4 @@ all_predictions = [station_class[x.argmax().item()] for x in all_predictions]
 
 log.info(f'Normalized predictions balance Accuracy: {balanced_accuracy_score(actual, all_predictions)*100:.2f}%')
 
+log.info("Exiting.")
