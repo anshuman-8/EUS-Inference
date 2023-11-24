@@ -1,4 +1,3 @@
-import sys
 import cv2
 import numpy as np
 import logging as log
@@ -108,16 +107,20 @@ class App(QWidget):
         controlv.addStretch(1)  # Add spacing between buttons and results
 
         # Placeholder for inference results
-        self.inference_result = QLabel('', self)
+        self.inference_result = QLabel('Station:', self)
         self.thread.prediction_signal.connect(self.update_inference_result)
         self.inference_result.setAlignment(Qt.AlignCenter)
         self.inference_result.setStyleSheet(
             "QLabel {"
             "color: white;"
             "font-size: 35px;"
+            "border: 2px solid black;"
+            "border-radius: 10px;"
+            "padding: 15px;"
+            "background-color: #272730;"
             "}"
         )
-        self.inference_result.setFixedSize(200, 45)
+        self.inference_result.setFixedSize(240, 75)
 
         hbox.addLayout(controlv)
         hbox.addWidget(self.inference_result, alignment=Qt.AlignCenter)
@@ -125,6 +128,7 @@ class App(QWidget):
         vbox.addLayout(hbox)
 
         self.inference_running = False
+        self.update_image_border()
 
     def setButtonStyle(self, widget):
         """Set common style for buttons"""
@@ -148,9 +152,9 @@ class App(QWidget):
     def update_image_border(self):
         """Updates the frame border based on the inference state"""
         if self.inference_running:
-            self.image_label.setStyleSheet("border: 2px solid green;")
+            self.image_label.setStyleSheet("border: 2px solid green; qproperty-alignment: AlignCenter;")
         else:
-            self.image_label.setStyleSheet("border: 0px;")
+            self.image_label.setStyleSheet("border: 1px solid transparent; qproperty-alignment: AlignCenter;")
 
     def closeEvent(self, event):
         """Shuts down the thread on app close"""
@@ -160,12 +164,15 @@ class App(QWidget):
     def refresh_video_source(self):
         """Refresh the video source"""
         # Stop the current thread
-        self.thread.stop()
+        if self.thread.inference:
+            self.toggle_inference()
+            self.thread.stop()
 
         # Start a new thread to capture video
         self.thread = VideoThread(config=self.config)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.no_video_signal.connect(self.update_no_video)
+        self.thread.prediction_signal.connect(self.update_inference_result)
         self.thread.start()
 
     def toggle_inference(self):
@@ -211,7 +218,7 @@ class App(QWidget):
             painter.setFont(font)
             painter.drawText(self.disply_width//4, self.display_height//2, "No video source")
             self.video_available = False
-            self.inference_result.setText('-')
+            self.inference_result.setText('Station: -')
 
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
@@ -234,7 +241,7 @@ class App(QWidget):
             log.debug("No prediction as no video source found")
             self.inference_result.setText(f'')
             return
-        self.inference_result.setText(f'Station: {prediction}')
+        self.inference_result.setText(f' {prediction}')
     
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""

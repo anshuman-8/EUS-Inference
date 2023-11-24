@@ -1,4 +1,3 @@
-import sys
 import cv2
 import numpy as np
 import logging as log
@@ -6,6 +5,7 @@ from typing import Dict, Any
 from PyQt5.QtCore import pyqtSignal, QThread
 
 from src.Inference.main import Inference
+from src.Inference.utils import crop_frame
 
 
 class VideoThread(QThread):
@@ -19,6 +19,7 @@ class VideoThread(QThread):
         self.inference = False
         self.EUSInference = None
         self.config = config
+        self.crop_dim = config.get("crop_dim", [0,0,0,0])
 
     def run(self):
         """Capture video from camera and send frames to main thread using signals."""
@@ -33,10 +34,14 @@ class VideoThread(QThread):
                 self.prediction_signal.emit('-')
                 break
 
+            # crop frame 
+            frame = crop_frame(frame, self.crop_dim)
+
             if self.inference:
                 frame, station = self.EUSInference.perform_inference_on_frame(frame)
                 if station is not None and self.inference:
-                    self.prediction_signal.emit(station)
+                    prediction = f'Station: {station}'
+                    self.prediction_signal.emit(prediction)
                 else:
                     self.prediction_signal.emit('-')
             

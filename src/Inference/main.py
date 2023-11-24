@@ -11,7 +11,6 @@ class Inference:
         self.model_path = config["checkpoint_path"]
         self.device = config["device"] if torch.cuda.is_available() else "cpu"
         self.model = None
-        self.crop_dim = config.get("crop_dim", [0,0,0,0])
         self.station_class = {0: '1', 1: '2', 2: '3'}
         self.config = config
 
@@ -37,9 +36,9 @@ class Inference:
                 reason,
                 (4, 25),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.9,
+                0.6,
                 (0, 0, 255),
-                2,
+                1,
                 cv2.LINE_AA,
             )
             log.info("Image is disturbed reason: " + reason)
@@ -47,8 +46,7 @@ class Inference:
             return frame, None
         
         # preprocess the frame
-        frame_tensor = crop_frame(frame,self.crop_dim)
-        frame_tensor = preprocess_frame(frame_tensor, self.config["image_size"], self.config["mean"], self.config["std"])
+        frame_tensor = preprocess_frame(frame, self.config["image_size"], self.config["mean"], self.config["std"])
 
         # perform inference
         prediction = self.model(frame_tensor.unsqueeze(0)).squeeze(0).softmax(0)
@@ -58,16 +56,16 @@ class Inference:
         # paste inference results
         for i in range(3):
             text = f"Station {self.station_class[i]}: {prediction[i].item()*100:.2f}%"
-            position = (4, (i + 1) * 25)
+            position = (4, (i + 1) * 20)
             color = (255, 255, 255)
             cv2.putText(
                 frame,
                 text,
                 position,
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.9,
+                0.6,
                 color,
-                2,
+                1,
                 cv2.LINE_AA,
             )
 

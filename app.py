@@ -1,8 +1,9 @@
-import torch
 import sys
 import json
-from PyQt5.QtWidgets import QApplication
+import torch
 import logging as log
+from PyQt5.QtWidgets import QApplication
+
 from src.main import App
 
 
