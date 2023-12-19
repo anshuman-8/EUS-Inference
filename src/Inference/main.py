@@ -31,17 +31,17 @@ class Inference:
         disturbance, reason = isDisturbed(frame)
 
         if disturbance:
-            cv2.putText(
-                frame,
-                reason,
-                (4, 25),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (0, 0, 255),
-                1,
-                cv2.LINE_AA,
-            )
-            log.info("Image is disturbed reason: " + reason)
+            # cv2.putText(
+            #     frame,
+            #     reason,
+            #     (4, 25),
+            #     cv2.FONT_HERSHEY_SIMPLEX,
+            #     0.6,
+            #     (0, 0, 255),
+            #     1,
+            #     cv2.LINE_AA,
+            # )
+            # log.info("Image is disturbed reason: " + reason)
             
             return frame, None
         
@@ -53,20 +53,19 @@ class Inference:
         prediction_class = prediction.argmax().item()
         log.info(f': Station {self.station_class[prediction_class]}')
 
-        # paste inference results
-        for i in range(3):
-            text = f"Station {self.station_class[i]}: {prediction[i].item()*100:.2f}%"
-            position = (4, (i + 1) * 20)
-            color = (255, 255, 255)
-            cv2.putText(
-                frame,
-                text,
-                position,
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                color,
-                1,
-                cv2.LINE_AA,
-            )
+        # for i in range(3):
+        #     text = f"Station {self.station_class[i]}: {prediction[i].item()*100:.2f}%"
+        #     position = (4, (i + 1) * 20)
+        #     color = (255, 255, 255)
+        #     cv2.putText(
+        #         frame,
+        #         text,
+        #         position,
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         0.6,
+        #         color,
+        #         1,
+        #         cv2.LINE_AA,
+        #     )
 
-        return frame, self.station_class[prediction_class]
+        return frame, prediction.tolist()

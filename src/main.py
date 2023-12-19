@@ -6,7 +6,7 @@ from typing import Dict, Any
 from PyQt5.QtCore import pyqtSlot, Qt
 from src.video_capture import VideoThread
 from PyQt5.QtGui import QPixmap, QPainter
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QPushButton, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QPushButton, QVBoxLayout, QHBoxLayout, QProgressBar
 
 
 class App(QWidget):
@@ -104,26 +104,58 @@ class App(QWidget):
         controlv = QVBoxLayout()
         controlv.addWidget(self.start_button, alignment=Qt.AlignCenter)
         controlv.addWidget(self.refresh_button, alignment=Qt.AlignCenter)
-        controlv.addStretch(1)  # Add spacing between buttons and results
+        hbox.addLayout(controlv)
 
         # Placeholder for inference results
         self.inference_result = QLabel('Station:', self)
-        self.thread.prediction_signal.connect(self.update_inference_result)
+        self.thread.station_signal.connect(self.update_inference_result)
+        self.thread.predictions_signal.connect(self.update_predictions)
         self.inference_result.setAlignment(Qt.AlignCenter)
         self.inference_result.setStyleSheet(
             "QLabel {"
             "color: white;"
-            "font-size: 35px;"
+            "font-size: 30px;"
             "border: 2px solid black;"
             "border-radius: 10px;"
-            "padding: 15px;"
+            "padding: 10px;"
             "background-color: #272730;"
             "}"
         )
-        self.inference_result.setFixedSize(240, 75)
-
-        hbox.addLayout(controlv)
+        self.inference_result.setFixedSize(240, 70)
         hbox.addWidget(self.inference_result, alignment=Qt.AlignCenter)
+
+        # Station % inference vertical layout
+        predictions_vlayout = QVBoxLayout()
+        self.station_labels = []
+        self.progress_bars = []
+
+        for i in range(3):
+            station_layout = QVBoxLayout()
+
+            # Create a label for the station
+            station_label = QLabel(f"Station {i + 1}:")
+            station_label.setStyleSheet(
+                "QLabel {"
+                "color: white;"
+                "font-size: 17px;"
+                "margin-top: 3px;"
+                "}"
+            )
+            station_layout.addWidget(station_label)
+            self.station_labels.append(station_label)
+
+            # Create a custom-sized progress bar
+            progress_bar = QProgressBar()
+            progress_bar.setFixedWidth(245)  # Set the width
+            progress_bar.setFixedHeight(13)  # Set the height
+            progress_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }") 
+            station_layout.addWidget(progress_bar)
+            self.progress_bars.append(progress_bar)
+
+            # Add the station layout to the main vertical layout
+            predictions_vlayout.addLayout(station_layout)
+
+        hbox.addLayout(predictions_vlayout)
 
         vbox.addLayout(hbox)
 
@@ -172,7 +204,9 @@ class App(QWidget):
         self.thread = VideoThread(config=self.config)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.no_video_signal.connect(self.update_no_video)
-        self.thread.prediction_signal.connect(self.update_inference_result)
+        self.thread.station_signal.connect(self.update_inference_result)
+        self.thread.predictions_signal.connect(self.update_predictions)
+
         self.thread.start()
 
     def toggle_inference(self):
@@ -240,8 +274,23 @@ class App(QWidget):
         if self.video_available is False:
             log.debug("No prediction as no video source found")
             self.inference_result.setText(f'')
+
             return
         self.inference_result.setText(f' {prediction}')
+
+    @pyqtSlot(list)
+    def update_predictions(self, predicitons):
+        """Updates the Station prediction label"""
+        default_prediction = [0.0, 30.0, 60.0]
+
+        if self.video_available is False:
+            for progress_bar, value in zip(self.progress_bars, default_prediction):
+                progress_bar.setValue(value)
+            return
+
+        for progress_bar, value in zip(self.progress_bars, predicitons):
+            progress_bar.setValue(int(value * 100))
+
     
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
