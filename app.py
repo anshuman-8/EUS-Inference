@@ -12,7 +12,7 @@ def main():
         level=log.DEBUG,
         format="%(asctime)s %(levelname)s %(message)s",
         datefmt="%H:%M:%S",
-        handlers=[log.FileHandler("testing.log", mode="w"), log.StreamHandler()],
+        handlers=[log.FileHandler("Inference-running.log", mode="w"), log.StreamHandler()],
     )
 
     # Load settings from settings.json

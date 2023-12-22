@@ -1,5 +1,4 @@
 import torch
-import cv2
 import logging as log
 from typing import Dict, Any
 from src.Inference.model import TestLightningModule
@@ -42,7 +41,7 @@ class Inference:
             #     cv2.LINE_AA,
             # )
             # log.info("Image is disturbed reason: " + reason)
-            
+            log.warning(f"Skipping frame, reason: {reason}")
             return frame, None
         
         # preprocess the frame

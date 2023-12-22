@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=EUSML
+Version=1.0
+Exec=/home/anshuman/EUS-config/venv/bin/python3 "/home/anshuman/EUS-config/app.py"
+Icon=/home/anshuman/EUS-config/icon.ico
+Type=Application
+Terminal=true
+Categories=Development

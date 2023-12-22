@@ -69,7 +69,8 @@ class App(QWidget):
         self.error_message_box.setAlignment(Qt.AlignCenter)
         self.error_message_box.setFixedSize(self.disply_width, 30)
 
-        # Inference block
+        # Inference block-----------------------------------------
+
         # Vertical box layout 
         vbox = QVBoxLayout(self)
         vbox.addWidget(self.image_label, alignment=Qt.AlignCenter)  
@@ -146,8 +147,9 @@ class App(QWidget):
 
             # Create a custom-sized progress bar
             progress_bar = QProgressBar()
-            progress_bar.setFixedWidth(245)  # Set the width
-            progress_bar.setFixedHeight(13)  # Set the height
+            progress_bar.setTextVisible(False)
+            progress_bar.setFixedWidth(245)
+            progress_bar.setFixedHeight(12)
             progress_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }") 
             station_layout.addWidget(progress_bar)
             self.progress_bars.append(progress_bar)
@@ -279,17 +281,20 @@ class App(QWidget):
         self.inference_result.setText(f' {prediction}')
 
     @pyqtSlot(list)
-    def update_predictions(self, predicitons):
+    def update_predictions(self, predictions):
         """Updates the Station prediction label"""
-        default_prediction = [0.0, 30.0, 60.0]
+        default_prediction = [0.0, 0.0, 0.0]
 
         if self.video_available is False:
-            for progress_bar, value in zip(self.progress_bars, default_prediction):
+            for progress_bar,station_label ,value in zip(self.progress_bars, self.station_labels,default_prediction):
                 progress_bar.setValue(value)
+                station_label.setText(f"{(value * 100):.1f}%")
             return
 
-        for progress_bar, value in zip(self.progress_bars, predicitons):
+        for index, (progress_bar, station_label, value) in enumerate(zip(self.progress_bars, self.station_labels, predictions)):
             progress_bar.setValue(int(value * 100))
+            station_label.setText(f"Station {index + 1}: {(value * 100):.1f}%")
+
 
     
     def convert_cv_qt(self, cv_img):
